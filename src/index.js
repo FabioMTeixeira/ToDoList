@@ -5,6 +5,10 @@ const uniqueValidator = require('mongoose-unique-validator');
 const jwt = require('jsonwebtoken');
 
 const bcrypt = require('bcryptjs'); //encriptador de senhas
+
+const models = require('./models');
+const services = require('./services');
+
 const { stringify } = require('querystring');
 
 const app = express();
@@ -12,8 +16,8 @@ app.use(express.json());
 
 const PORT = 3000;
 const DATABASE_URL = 'mongodb://localhost:27017/todolist';
-const SALT = '$2a$10$k6LLGppeZOiifBpEC/teA.';
 const JWT_SECRET = 'SUPERSECRET';
+const SALT = '$2a$10$k6LLGppeZOiifBpEC/teA.';
 
 const main = async () => {
     try {
@@ -28,22 +32,6 @@ const main = async () => {
     };
 };
 
-const UserSchema = new mongoose.Schema({
-    username: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-});
-
-UserSchema.plugin(uniqueValidator);
-
-const User = new mongoose.model('User', UserSchema);
-
-const ListSchema = new mongoose.Schema({
-    name: { type: String, required: true },
-    userId: { type: String, required: true}
-});
-
-const List = new mongoose.model('List', ListSchema);
-
 app.get('/salt', async (req, res) => {
     bcrypt.genSalt().then((salt) => {
         res.status(200).json({ salt });
@@ -53,62 +41,23 @@ app.get('/salt', async (req, res) => {
 app.post('/users', async (req, res) => {
     const { username, password } = { ...req.body };
 
-    if(!password || password.trim() === '') {
-        return res.status(400).json({ error: 'invalid password' });
-    };
+    const { status, json } = await services.createUser(username, password);
 
-    if(!username || username.trim() === '') {
-        return res.status(400).json({ error: 'invalid username' });
-    };
-
-    bcrypt.hash(password, SALT).then(async (hash) => {
-        const data = {
-            username,
-            password: hash
-        };
-
-        const user = new User(data);
-        user.save().then((document) => {
-            res.status(201).json(document);
-        }).catch((error) => {
-            res.status(400).json(error);
-        });    
-    });
+    res.status(status).json(json);
 });
 
 app.post('/auth', async (req, res) => {
     const { username, password } = req.body;
+    
+    const { error, user } = await services.authUser(username,password);
 
-    if(!password || password.trim() === '') {
-        return res.status(401).json({ error: 'invalid credentials' });
-    };
+    if(error) {
+        return res.status(401).json(error);
+    }
 
-    if(!username || username.trim() === '') {
-        return res.status(401).json({ error: 'invalid credentials' });
-    };
+    const token = await services.generateToken(user.id);
 
-    const user = await User.findOne({ username });
-
-    if(!user) {
-        return res.status(401).json({ error: 'invalid credentials' });
-    };
-
-    bcrypt.hash(password, SALT).then(async (hash) => {
-        if(hash === user.password) {
-            const token = jwt.sign({
-                sub: user.id,
-            }, JWT_SECRET, { expiresIn: '600s' });
-
-            const data = {
-                authenticated: true,
-                token,
-            };
-
-            return res.status(200).json(data);
-        }
-
-        res.status(401).json({ error: 'invalid credentials' });
-    });
+    res.status(200).json({ token });
 });
 
 const authentication = (req, res, next) => {
@@ -133,13 +82,13 @@ const authentication = (req, res, next) => {
 };
 
 app.get('/auth/test', authentication, async (req, res) => {
-    const user = await User.findById(req.userId);
+    const user = await models.User.findById(req.userId);
 
     res.status(200).json({ user });
 });
 
 app.get('/lists', authentication, async (req, res) => {
-    const lists = await List.find({ userId: req.userId }, ['name']);
+    const lists = await models.List.find({ userId: req.userId }, ['name']);
 
     res.status(200).json(lists);
 });
@@ -151,12 +100,25 @@ app.post('/lists', authentication, async (req, res) => {
         return res.status(400).json({ error: 'invalid credentials' })
     };
 
-    const list = new List({ name, userId: req.userId });
+    const list = new models.List({ name, userId: req.userId });
     await list.save().then((document) => {
         res.status(201).json(document);
     }).catch((error) => {
         res.status(400).json(error);
     });
+});
+
+app.put('/lists/:id', authentication, async (req, res) => {
+    const { name } = req.body;
+    const { id } = req.params;
+
+    if(!name || name.trim() === '') {
+        return res.status(400).json({ error: 'invalid credentials' });
+    }
+
+    const list = await models.List.updateOne({ _id: id }, { name });
+
+    res.status(200).json(list);
 });
 
 main();
