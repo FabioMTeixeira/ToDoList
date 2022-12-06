@@ -12,7 +12,13 @@ exports.User = new mongoose.model('User', UserSchema);
 
 const ListSchema = new mongoose.Schema({
     name: { type: String, required: true },
-    userId: { type: String, required: true}
-});
+    userId: { 
+        type: mongoose.Schema.Types.ObjectId,
+        ref:'User',
+        requires: true 
+    }
+}); 
+
+ListSchema.index({ name: 1, userId: 1 }, { unique: true });
 
 exports.List = new mongoose.model('List', ListSchema);

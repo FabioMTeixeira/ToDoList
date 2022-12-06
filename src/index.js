@@ -7,7 +7,8 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs'); //encriptador de senhas
 
 const models = require('./models');
-const services = require('./services');
+const userServices = require('./services/user_services');
+const { authentication } = require('./middlewares');
 
 const { stringify } = require('querystring');
 
@@ -16,8 +17,6 @@ app.use(express.json());
 
 const PORT = 3000;
 const DATABASE_URL = 'mongodb://localhost:27017/todolist';
-const JWT_SECRET = 'SUPERSECRET';
-const SALT = '$2a$10$k6LLGppeZOiifBpEC/teA.';
 
 const main = async () => {
     try {
@@ -41,45 +40,28 @@ app.get('/salt', async (req, res) => {
 app.post('/users', async (req, res) => {
     const { username, password } = { ...req.body };
 
-    const { status, json } = await services.createUser(username, password);
+    const { error, user } = await userServices.createUser(username, password);
 
-    res.status(status).json(json);
+    if(error) {
+        return res.status(400).json({ error });
+    }
+
+    res.status(201).json({ user });
 });
 
 app.post('/auth', async (req, res) => {
     const { username, password } = req.body;
     
-    const { error, user } = await services.authUser(username,password);
+    const { error, user } = await userServices.authUser(username,password);
 
     if(error) {
         return res.status(401).json(error);
     }
 
-    const token = await services.generateToken(user.id);
+    const token = await userServices.generateToken(user.id);
 
     res.status(200).json({ token });
 });
-
-const authentication = (req, res, next) => {
-    const authHeader = req.headers['authorization'];
-    if(!authHeader) {
-        return res.status(401).json({ error: 'invalid credentials' });
-    };
-
-    const [_, token] = authHeader.split(' ');
-    if(!token) {
-        return res.status(401).json({ error: 'invalid credentials' });
-    };
-
-    jwt.verify(token, JWT_SECRET, (error, payload) => {
-        if(error) {
-            return res.status(401).json({ error });
-        }
-
-        req.userId = payload.sub;
-        next();
-    });
-};
 
 app.get('/auth/test', authentication, async (req, res) => {
     const user = await models.User.findById(req.userId);
@@ -88,7 +70,8 @@ app.get('/auth/test', authentication, async (req, res) => {
 });
 
 app.get('/lists', authentication, async (req, res) => {
-    const lists = await models.List.find({ userId: req.userId }, ['name']);
+    const userId = mongoose.Types.ObjectId(req.userId);
+    const lists = await models.List.find({ userId }, ['name']);
 
     res.status(200).json(lists);
 });

@@ -1,30 +1,18 @@
 const bcrypt = require('bcryptjs'); //encriptador de senhas
-const models = require('./models');
+const models = require('../models');
 
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = 'SUPERSECRET';
-const SALT = '$2a$10$k6LLGppeZOiifBpEC/teA.';
-
+const { SALT, JWT_SECRET } = require('../config');
 
 exports.createUser = async (username, password) => {
     if(!password || password.trim() === '') {
-        return { 
-            status: 400, 
-            json: { 
-                error: 'invalid password' 
-            } 
-        };
-    };
+        return { error: 'invalid password' };
+    }
 
     if(!username || username.trim() === '') {
-        return { 
-            status: 400, 
-            json: { 
-                error: 'invalid username' 
-            } 
-        };
-    };
+        return { error: 'invalid username' };
+    }
 
     return bcrypt.hash(password, SALT).then(async (hash) => {
         const data = {
@@ -35,8 +23,8 @@ exports.createUser = async (username, password) => {
         const user = new models.User(data);
 
         return user.save()
-            .then((document) => ({ status: 201, json: document }))
-            .catch((error) => ({ status: 400, json: error }));    
+            .then((document) => ({ user: document }))
+            .catch((error) => ({ error }));    
     });
 };
 
