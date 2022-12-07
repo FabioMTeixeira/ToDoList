@@ -22,3 +22,14 @@ const ListSchema = new mongoose.Schema({
 ListSchema.index({ name: 1, userId: 1 }, { unique: true });
 
 exports.List = new mongoose.model('List', ListSchema);
+
+const TaskSchema = new mongoose.Schema({
+    title:{ type: String, required: true, minLength: 1 },
+    listId: { 
+        type: mongoose.Schema.Types.ObjectId,
+        ref:'List',
+        requires: true 
+    }
+});
+
+exports.Task = new mongoose.model('Task', TaskSchema);

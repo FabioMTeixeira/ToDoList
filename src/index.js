@@ -8,6 +8,8 @@ const bcrypt = require('bcryptjs'); //encriptador de senhas
 
 const models = require('./models');
 const userServices = require('./services/user_services');
+const listService = require('./services/list_service');
+const taskService = require('./services/task_service');
 const { authentication } = require('./middlewares');
 
 const { stringify } = require('querystring');
@@ -102,6 +104,40 @@ app.put('/lists/:id', authentication, async (req, res) => {
     const list = await models.List.updateOne({ _id: id }, { name });
 
     res.status(200).json(list);
+});
+
+app.get('/lists/:id', authentication, async (req, res) => {
+    const { id } = req.params;
+    const { userId } = req;
+
+    const { error, list } = await listService.find(userId, id);
+
+    if(error) {
+        return res.status(404).json({ error });
+    }
+    
+    const { tasksError, tasks } = await taskService.findTasks(id);
+
+    return res.status(200).json({ list, tasks });
+});
+
+app.post('/lists/:listId/tasks', authentication, async (req, res) => {
+    const { listId } = req.params;
+    const { userId } = req;
+    const { error, list } = await listService.find(userId, listId);
+
+    if(error) {
+        return res.status(404).json({ error });
+    }
+
+    const { title } = req.body;
+    const { taskError, task } = await taskService.createTask(list.id, title);
+
+    if(taskError) {
+        return res.status(400).json({ error });
+    }
+
+    res.status(200).json({ task });
 });
 
 main();
