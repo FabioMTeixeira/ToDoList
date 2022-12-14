@@ -29,7 +29,9 @@ const TaskSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref:'List',
         requires: true 
-    }
+    },
+    completedAt: { type: Date },
+    updatedAt: { type: Date }
 });
 
 exports.Task = new mongoose.model('Task', TaskSchema);

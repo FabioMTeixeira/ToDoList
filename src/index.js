@@ -140,4 +140,35 @@ app.post('/lists/:listId/tasks', authentication, async (req, res) => {
     res.status(200).json({ task });
 });
 
+app.put('/lists/:listId/tasks/:id', authentication, async (req, res) => {
+    const { listId, id } = req.params;
+    const { userId } = req;
+    const { error } = await listService.find(userId, listId);
+
+    if(error) {
+        return res.status(404).json({ error });
+    }
+
+    const { title } = req.body;
+    const { task } = await taskService.updateTask(id, title);
+
+    res.status(200).json({ task })
+});
+
+app.post('/tasks/:id/completed_tasks', authentication, async (req, res) => {
+    const { id } = req.params;
+    const { userId } = req;
+
+    const { task } = await taskService.findTask(id);
+    const { error } = await listService.find(userId, task.listId);
+
+    if(error) {
+        return res.status(401).json({ error });
+    }
+
+    const completedTask = await taskService.completeTask(id);
+
+    res.status(200).json({ task: completedTask });
+});
+
 main();

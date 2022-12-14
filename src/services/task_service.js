@@ -14,7 +14,35 @@ exports.createTask = async (listId, title) => {
 exports.findTasks = async (listId) => {
     const tasks = await models.Task.find({ 
         listId: mongoose.Types.ObjectId(listId) 
-    }, ['_id', 'title']);
+    }, ['_id', 'title', 'updatedAt']);
 
     return { tasks };
-}
+};
+
+exports.updateTask = async(taskId, title) => {
+    const task = await models.Task.findById(taskId);
+    task.title = title;
+    task.updatedAt = new Date();
+
+    await task.save();
+
+    return { task };
+};
+
+exports.findTask = async (taskId) => {
+    const task = await models.Task.findById(taskId);
+
+    return { task };
+};
+
+exports.completeTask = async (taskId) => {
+    const { task } = await this.findTask(taskId); 
+
+    const now = new Date();
+    task.completedAt = now;
+    task.updatedAt = now;
+
+    await task.save();
+
+    return { task };
+};
