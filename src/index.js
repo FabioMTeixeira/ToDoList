@@ -109,6 +109,7 @@ app.put('/lists/:id', authentication, async (req, res) => {
 app.get('/lists/:id', authentication, async (req, res) => {
     const { id } = req.params;
     const { userId } = req;
+    const { completedTasks } = req.query;
 
     const { error, list } = await listService.find(userId, id);
 
@@ -116,7 +117,7 @@ app.get('/lists/:id', authentication, async (req, res) => {
         return res.status(404).json({ error });
     }
     
-    const { tasksError, tasks } = await taskService.findTasks(id);
+    const { tasksError, tasks } = await taskService.findTasks(id, { completedTasks });
 
     return res.status(200).json({ list, tasks });
 });
@@ -166,9 +167,9 @@ app.post('/tasks/:id/completed_tasks', authentication, async (req, res) => {
         return res.status(401).json({ error });
     }
 
-    const completedTask = await taskService.completeTask(id);
+    const result = await taskService.completeTask(id);
 
-    res.status(200).json({ task: completedTask });
+    res.status(200).json({ task: result.task });
 });
 
 main();

@@ -11,10 +11,23 @@ exports.createTask = async (listId, title) => {
         .catch((error) => ({ error }));
 };
 
-exports.findTasks = async (listId) => {
-    const tasks = await models.Task.find({ 
-        listId: mongoose.Types.ObjectId(listId) 
-    }, ['_id', 'title', 'updatedAt']);
+exports.findTasks = async (listId, filters) => {
+    const { completedTasks } = filters;
+
+    let tasks = [];
+    
+    if (completedTasks === "true") {
+
+        tasks = await models.Task.find({ 
+            listId: mongoose.Types.ObjectId(listId) 
+        }, ['_id', 'title', 'completedAt', 'updatedAt']);
+    } else {
+
+        tasks = await models.Task.find({ 
+            listId: mongoose.Types.ObjectId(listId),
+            completedAt: { "$exists": false } 
+        }, ['_id', 'title', 'completedAt', 'updatedAt']);
+    }
 
     return { tasks };
 };
