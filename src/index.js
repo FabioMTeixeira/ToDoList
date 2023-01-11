@@ -10,6 +10,7 @@ const models = require('./models');
 const userServices = require('./services/user_services');
 const listService = require('./services/list_service');
 const taskService = require('./services/task_service');
+const validationService = require('./services/validation_service');
 const { authentication } = require('./middlewares');
 
 const { stringify } = require('querystring');
@@ -80,24 +81,22 @@ app.get('/lists', authentication, async (req, res) => {
 
 app.post('/lists', authentication, async (req, res) => {
     const { name } = req.body;
+    const { userId } = req.userId;
 
-    if(!name || name.trim() ==='') {
-        return res.status(400).json({ error: 'invalid credentials' })
-    };
+    const { list, error } = await listService.create(userId, name);
 
-    const list = new models.List({ name, userId: req.userId });
-    await list.save().then((document) => {
-        res.status(201).json(document);
-    }).catch((error) => {
+    if (error) {
         res.status(400).json(error);
-    });
+    }
+
+    res.status(201).json({ list });
 });
 
 app.put('/lists/:id', authentication, async (req, res) => {
     const { name } = req.body;
     const { id } = req.params;
 
-    if(!name || name.trim() === '') {
+    if(validationService.isBlank(name)) {
         return res.status(400).json({ error: 'invalid credentials' });
     }
 

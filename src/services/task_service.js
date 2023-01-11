@@ -1,10 +1,15 @@
 const { default: mongoose } = require('mongoose');
 const { userInfo } = require('os');
 const models = require('../models');
+const validationService = require('./validation_service');
 
 exports.createTask = async (listId, title) => {
     const data = { listId, title };
     const task = new models.Task(data);
+
+    if(validationService.isBlank(title)) {
+        return { error: 'invalid title' }; //1h34min semana 7
+    }
 
     return task.save()
         .then((document) => ({ task: document }))
@@ -14,20 +19,14 @@ exports.createTask = async (listId, title) => {
 exports.findTasks = async (listId, filters) => {
     const { completedTasks } = filters;
 
-    let tasks = [];
+    let query = { listId: mongoose.Types.ObjectId(listId) };
     
-    if (completedTasks === "true") {
+    if (completedTasks !== "true") {
+        query['completedAt'] = { "$exists": false };
+    };
 
-        tasks = await models.Task.find({ 
-            listId: mongoose.Types.ObjectId(listId) 
-        }, ['_id', 'title', 'completedAt', 'updatedAt']);
-    } else {
-
-        tasks = await models.Task.find({ 
-            listId: mongoose.Types.ObjectId(listId),
-            completedAt: { "$exists": false } 
-        }, ['_id', 'title', 'completedAt', 'updatedAt']);
-    }
+    const fields = ['_id', 'title', 'completedAt', 'updatedAt'];
+    const tasks = await models.Task.find(query, fields);
 
     return { tasks };
 };
