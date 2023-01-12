@@ -7,8 +7,9 @@ exports.createTask = async (listId, title) => {
     const data = { listId, title };
     const task = new models.Task(data);
 
-    if(validationService.isBlank(title)) {
-        return { error: 'invalid title' }; //1h34min semana 7
+    if(validationService.isBlank(title) &&
+    validationService.validateLength(title, 1, 30)) {
+        return { error: 'invalid title' };
     }
 
     return task.save()

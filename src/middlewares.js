@@ -21,3 +21,14 @@ exports.authentication = (req, res, next) => {
         next();
     });
 };
+
+exports.canAccessList = (req, res, next) => {
+    const { listId } = req.params;
+    const { userId } = req;
+
+    if (!authorizationService.canAccessList(userId, listId)) {
+        return res.status(401);
+    };
+
+    next();
+}
