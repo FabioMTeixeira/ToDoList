@@ -49,7 +49,6 @@ app.post('/users', async (req, res) => {
     if(error) {
         return res.status(400).json({ error });
     }
-
     res.status(201).json({ user });
 });
 
@@ -82,15 +81,18 @@ app.get('/lists', authentication, async (req, res) => {
 
 app.post('/lists', authentication, async (req, res) => {
     const { name } = req.body;
-    const { userId } = req.userId;
 
-    const { list, error } = await listService.create(userId, name);
-
-    if (error) {
-        res.status(400).json(error);
+    if(validationService.isBlank(name)) {
+        return res.status(400).json({ error: 'invalid credentials' });
     }
 
-    res.status(201).json({ list });
+    const list = new models.List({ name, userId: req.userId });
+    await list.save().then((document) => {
+        res.status(201).json(document);
+    }).catch((error) => {
+        res.status(400).json(error);
+    });
+
 });
 
 app.put('/lists/:id', authentication, async (req, res) => {
@@ -122,8 +124,15 @@ app.get('/lists/:id', authentication, async (req, res) => {
     return res.status(200).json({ list, tasks });
 });
 
-app.post('/lists/:listId/tasks', authentication, canAccessList, async (req, res) => {
+app.post('/lists/:listId/tasks', authentication, async (req, res) => {
     const { listId } = req.params;
+    const { userId } = req;
+
+    if (!authorizationService.canAccessList(userId, listId)) {
+        return res.status(401);
+    }
+
+
     const { title } = req.body;
     const { error, task } = await taskService.createTask(listId, title);
 
@@ -152,7 +161,8 @@ app.post('/tasks/:id/completed_tasks', authentication, async (req, res) => {
     const { id } = req.params;
     const { userId } = req;
 
-    if (!authorizationService.canAccessList(userId, task.listId)) {
+    
+    if (!authorizationService.canAccessTask(userId, id)) {
         return res.status(401);
     };
 

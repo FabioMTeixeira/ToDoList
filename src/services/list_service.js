@@ -8,9 +8,9 @@ exports.find = async (userId, listId) => {
 };
 
 exports.create = async (userId, name) => {
-        if(validationService.isBlank(name)) {
-        return { error: 'invalid credentials' };
-    };
+        if (validationService.isBlank(name)) {
+            return { error: 'invalid credentials' };
+    }
 
     const list = new models.List({ name, userId });
     await list.save().then((document) => {
